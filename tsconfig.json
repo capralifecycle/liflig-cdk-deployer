@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "outDir": "build",
+    "target": "ES2020",
+    "lib": ["ESNext"],
+    "strict": true,
+    "module": "commonjs"
+  }
+}
