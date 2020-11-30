@@ -158,6 +158,11 @@ function optionalEnv(name: string): string | undefined {
 }
 
 async function main() {
+  if (process.env["IS_TEST"] !== undefined) {
+    console.log("Running in test mode - exiting")
+    return
+  }
+
   const targetRoleArn = requireEnv("CDK_TARGET_ROLE_ARN")
   console.log(`Assuming role for ${targetRoleArn} to use for CDK deployment`)
 
