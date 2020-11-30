@@ -136,7 +136,7 @@ async function cdkDeploy({
     ...stackNames,
   ]
 
-  await exec("cdk", args, {
+  await exec("node_modules/.bin/cdk", args, {
     env: cdkCredentials,
   })
 }
