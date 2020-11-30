@@ -16,7 +16,7 @@ buildConfig(
 
     checkout scm
 
-    stage("Check code") {
+    stage("Build code") {
       insideToolImage("node:14") {
         sh "npm ci"
         sh "npx tsc"

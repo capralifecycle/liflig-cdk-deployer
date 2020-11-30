@@ -11,8 +11,8 @@ RUN mkdir /app
 WORKDIR /app
 
 COPY package*.json /app/
-RUN npm ci
+RUN npm install --only=prod
 
-COPY tsconfig.json deploy.ts /app/
+COPY build/deploy.js /app/
 
-CMD ["npx", "ts-node", "deploy.ts"]
+CMD ["node", "--enable-source-maps", "deploy.js"]
