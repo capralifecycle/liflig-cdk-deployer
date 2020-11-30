@@ -1,12 +1,13 @@
 import * as S3 from "aws-sdk/clients/s3"
+import * as STS from "aws-sdk/clients/sts"
 import * as del from "del"
 import * as execa from "execa"
 import * as fs from "fs"
-import * as globby from "globby"
 import * as path from "path"
 import * as tempy from "tempy"
 
 const s3 = new S3()
+const sts = new STS()
 
 /**
  * The schema for cloud-assembly.json.
@@ -36,37 +37,6 @@ function exec(
   const result = execa(file, args, options)
   result.stdout?.pipe(process.stdout)
   result.stderr?.pipe(process.stderr)
-  return result
-}
-
-async function readCloudAssemblyDetails(
-  inputFile: string,
-): Promise<CloudAssemblyDetails> {
-  return JSON.parse(
-    await fs.promises.readFile(inputFile, "utf-8"),
-  ) as CloudAssemblyDetails
-}
-
-async function collectVariables(
-  files: string[],
-): Promise<Record<string, string>> {
-  const result: Record<string, string> = {}
-
-  for (const file of files) {
-    const data = JSON.parse(
-      await fs.promises.readFile(file, "utf-8"),
-    ) as Record<string, string>
-
-    for (const [key, value] of Object.entries(data)) {
-      result[key] = value
-    }
-  }
-
-  console.log(`Found ${Object.keys(result).length} variables`)
-  for (const [key, value] of Object.entries(result)) {
-    console.log(`  ${key}: ${value}`)
-  }
-
   return result
 }
 
@@ -132,17 +102,21 @@ async function fetchCloudAssembly(
 }
 
 async function cdkDeploy({
+  cdkCredentials,
   cloudAssemblyDir,
-  deployRoleArn,
+  cloudFormationRoleArn,
   stackNames,
   parameters,
 }: {
+  cdkCredentials: Record<string, string>
   cloudAssemblyDir: string
-  deployRoleArn: string | undefined
+  cloudFormationRoleArn: string | undefined
   stackNames: string[]
   parameters: string[]
 }): Promise<void> {
-  const deployRoleArnArgs = deployRoleArn ? ["--role-arn", deployRoleArn] : []
+  const cloudFormationRoleArnArgs = cloudFormationRoleArn
+    ? ["--role-arn", cloudFormationRoleArn]
+    : []
 
   const parametersExpanded: string[] = []
   for (const parameter of parameters) {
@@ -155,14 +129,16 @@ async function cdkDeploy({
     cloudAssemblyDir,
     "--require-approval=never",
     "--verbose",
-    ...deployRoleArnArgs,
+    ...cloudFormationRoleArnArgs,
     "deploy",
     ...parametersExpanded,
     "--exclusively",
     ...stackNames,
   ]
 
-  await exec("cdk", args)
+  await exec("cdk", args, {
+    env: cdkCredentials,
+  })
 }
 
 function requireEnv(name: string): string {
@@ -182,29 +158,42 @@ function optionalEnv(name: string): string | undefined {
 }
 
 async function main() {
-  const deployRoleArn = optionalEnv("CDK_DEPLOY_ROLE_ARN")
-  const currentStageName = requireEnv("CDK_STAGE")
+  const targetRoleArn = requireEnv("CDK_TARGET_ROLE_ARN")
+  console.log(`Assuming role for ${targetRoleArn} to use for CDK deployment`)
 
-  // TODO: Download zip for CodePipeline input artifact?
-  const inputDataDir = requireEnv("INPUT_DATA_DIR")
+  const assumeRoleResult = await sts
+    .assumeRole({
+      RoleArn: targetRoleArn,
+      RoleSessionName: "liflig-cdk-deployer",
+    })
+    .promise()
+
+  const cdkCredentials = {
+    AWS_ACCESS_KEY_ID: assumeRoleResult.Credentials!.AccessKeyId,
+    AWS_SECRET_ACCESS_KEY: assumeRoleResult.Credentials!.SecretAccessKey,
+    AWS_SESSION_TOKEN: assumeRoleResult.Credentials!.SessionToken,
+  }
+
+  const cloudFormationRoleArn = optionalEnv("CDK_CLOUD_FORMATION_ROLE_ARN")
+  const currentStageName = requireEnv("CDK_STAGE")
 
   const cloudAssemblyDir = tempy.directory({ prefix: "cdk-deployer-" })
 
-  const cloudAssemblyDetails = await readCloudAssemblyDetails(
-    path.join(inputDataDir, "cloud-assembly.json"),
-  )
+  const cloudAssemblyDetails = JSON.parse(
+    requireEnv("CDK_CLOUD_ASSEMBLY"),
+  ) as CloudAssemblyDetails
 
-  const variables = await collectVariables(
-    (await globby("variables*.json", { cwd: inputDataDir })).map((it) =>
-      path.join(inputDataDir, it),
-    ),
-  )
+  const variablesRaw = optionalEnv("CDK_VARIABLES")
+  const variables = variablesRaw
+    ? (JSON.parse(variablesRaw) as Record<string, string>)
+    : {}
 
   const parameters = collectParameters(cloudAssemblyDetails, variables)
 
   const currentStage = cloudAssemblyDetails.stages.find(
     (it) => it.name === currentStageName,
   )
+
   if (!currentStage) {
     console.warn(
       `No definition for stage ${currentStageName} found - nothing to do`,
@@ -222,8 +211,9 @@ async function main() {
   await fetchCloudAssembly(cloudAssemblyDetails, cloudAssemblyDir)
 
   await cdkDeploy({
+    cdkCredentials,
     cloudAssemblyDir,
-    deployRoleArn,
+    cloudFormationRoleArn: cloudFormationRoleArn,
     stackNames: currentStage.stackNames,
     parameters,
   })
