@@ -7,7 +7,7 @@ docker build -t cdk-deployer .
 docker run \
   --rm \
   -it \
-  -e CDK_STAGE=dev \
+  -e CDK_ENV_NAME=dev \
   -e CDK_DEPLOY_ROLE_ARN= \
   -e INPUT_DATA_DIR=/data \
   -e AWS_DEFAULT_REGION \
@@ -18,6 +18,6 @@ docker run \
   -v "$PWD/data:/data" \
   cdk-deployer
 
-# export CDK_STAGE=dev
+# export CDK_ENV_NAME=dev
 # export CDK_DEPLOY_ROLE_ARN=
 # export INPUT_DATA_DIR=data/

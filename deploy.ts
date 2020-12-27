@@ -15,7 +15,7 @@ const sts = new STS()
 interface CloudAssemblyDetails {
   cloudAssemblyBucketName: string
   cloudAssemblyBucketKey: string
-  stages: {
+  environments: {
     name: string
     stackNames: string[]
   }[]
@@ -180,7 +180,7 @@ async function main() {
   }
 
   const cloudFormationRoleArn = optionalEnv("CDK_CLOUD_FORMATION_ROLE_ARN")
-  const currentStageName = requireEnv("CDK_STAGE")
+  const currentEnvName = requireEnv("CDK_ENV_NAME")
 
   const cloudAssemblyDir = tempy.directory({ prefix: "cdk-deployer-" })
 
@@ -195,20 +195,20 @@ async function main() {
 
   const parameters = collectParameters(cloudAssemblyDetails, variables)
 
-  const currentStage = cloudAssemblyDetails.stages.find(
-    (it) => it.name === currentStageName,
+  const currentEnv = cloudAssemblyDetails.environments.find(
+    (it) => it.name === currentEnvName,
   )
 
-  if (!currentStage) {
+  if (!currentEnv) {
     console.warn(
-      `No definition for stage ${currentStageName} found - nothing to do`,
+      `No definition for environment ${currentEnvName} found - nothing to do`,
     )
     return
   }
 
-  if (currentStage.stackNames.length === 0) {
+  if (currentEnv.stackNames.length === 0) {
     console.warn(
-      `Found stage for ${currentStageName} but no stacks in list - nothing to do`,
+      `Found environment for ${currentEnvName} but no stacks in list - nothing to do`,
     )
     return
   }
@@ -219,7 +219,7 @@ async function main() {
     cdkCredentials,
     cloudAssemblyDir,
     cloudFormationRoleArn: cloudFormationRoleArn,
-    stackNames: currentStage.stackNames,
+    stackNames: currentEnv.stackNames,
     parameters,
   })
 

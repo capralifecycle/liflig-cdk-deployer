@@ -3,7 +3,7 @@
 // See https://github.com/capralifecycle/jenkins-pipeline-library
 @Library("cals") _
 
-def version = "1-experimental"
+def version = "1-experimental.2"
 
 // Repo defined in https://github.com/capralifecycle/liflig-incubator-common-infra
 def dockerImageName = "001112238813.dkr.ecr.eu-west-1.amazonaws.com/incub-common-liflig-cdk-deployer"

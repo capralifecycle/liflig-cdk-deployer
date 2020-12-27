@@ -6,7 +6,7 @@ pipeline.
 
 ## How it works
 
-1. Identify the stacks for the current stage to be deployed
+1. Identify the stacks for the current environment to be deployed
 1. Download the Cloud Assembly
 1. Build parameters to be used during deployment
 1. Run CDK to deploy the stacks for the given Cloud Assembly
@@ -21,7 +21,7 @@ Environment variables:
   ECS task role
 - `CDK_CLOUD_FORMATION_ROLE_ARN` (optional) - IAM Role used by
   CloudFormation to create resources in the target account
-- `CDK_STAGE` - name of stage to be deployed
+- `CDK_ENV_NAME` - name of environment to be deployed
 - `CDK_CLOUD_ASSEMBLY` - see below
 - `CDK_VARIABLES` (optional) - see below
 
@@ -29,7 +29,7 @@ Environment variables:
 
 JSON-serialized value including a reference to an already
 synthesized CDK Cloud Assembly stored on S3, stack names for
-the different stages and mapping for variables to stack parameters.
+the different environments and mapping for variables to stack parameters.
 
 Example:
 
@@ -37,7 +37,7 @@ Example:
 {
   "cloudAssemblyBucketName": "name-of-bucket",
   "cloudAssemblyBucketKey": "cloud-assembly/ff56fbd62edaa5d9112cd41d981a4bf966f088361b9c4eab7620389905390bd2.zip",
-  "stages": [
+  "environments": [
     { "name": "dev", "stackNames": ["myapp-dev-core", "myapp-dev-api"] }
   ],
   "parameters": [
