@@ -6,7 +6,7 @@
     "aws-sdk": "2.791.0",
     "del": "6.0.0",
     "execa": "5.0.0",
-    "tempy": "1.0.0"
+    "tempy": "1.0.1"
   },
   "devDependencies": {
     "@types/node": "14.14.35",
