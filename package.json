@@ -3,7 +3,7 @@
   "version": "0.0.0-development",
   "dependencies": {
     "aws-cdk": "1.106.1",
-    "aws-sdk": "2.791.0",
+    "aws-sdk": "2.918.0",
     "del": "6.0.0",
     "execa": "5.0.0",
     "tempy": "1.0.1"
